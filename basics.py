@@ -2,7 +2,7 @@ import pymysql, time, pydot, statistics, os
 import subprocess #alternative to os
 import networkx
 
-# sets up the massive file. 
+# sets up the massive file of all individuals. 
 # manual corrections: remove the extra line in #120418 (Michael 229); 
 # 		rewrite the line for Konstantinos Choumnos (#159899, Konstantinos 20524)
 def settingup(filename, cursor):
@@ -39,7 +39,8 @@ def memoryload(inputfile):
 	manualCorr(everyone)
 	return everyone
 
-def timeConv(t):	# to organize time based on the "M XI" system, obsolete?
+# this function can be used to organize time based on the "M XI" system, obsolete.
+def timeConv(t):	
 	arr = ['a', 'a', 'a', 'a']
 	if len(t) == 4:
 		arr[1] = t[0:2]
@@ -68,7 +69,8 @@ def timeConv(t):	# to organize time based on the "M XI" system, obsolete?
 		arr[2] = arr2[2]
 		return arr
 
-def ethnicities(everyone): # updates everyone's ethnicities in memory
+# updates everyone's ethnicities in memory
+def ethnicities(everyone): 
 	conn = pymysql.connect(host='localhost', port=3306, user='root', passwd='1234', db='pbw')
 	cur = conn.cursor()
 	cur.execute("SELECT p.personKey, name, mdbCode, fp.fpKey, fp.factoidKey, " + \
@@ -80,9 +82,11 @@ def ethnicities(everyone): # updates everyone's ethnicities in memory
 	for row in cur:
 		temp = [str(x) for x in row]
 		everyone[temp[0]].ethnic(temp[6]) # updates everyone's ethnicities
+
 		
-def relevantPeople(everyone): # returns all the relevant individuals (L10-E12)
-	# this removes about 2,000 individuals who are mostly 12C.
+# returns all the relevant individuals (L10-E12)
+# this removes about 2,000 individuals who are mostly 12C.
+def relevantPeople(everyone): 
 	relev = {}
 	n = 0
 	for i, val in everyone.items():
@@ -94,7 +98,7 @@ def relevantPeople(everyone): # returns all the relevant individuals (L10-E12)
 	print('Selected only the relevant people (%s).' % n)
 	return relev
 
-# subfunction to organize time, obsolete?
+# an obsolete subfunction to organize time
 def singleDig(s, arr): # s=2 digits, arr=newtime org, n=1 or 2 replacements
 	if int(s) > 80:
 		arr[0] = 'L'
@@ -113,8 +117,13 @@ def singleDig(s, arr): # s=2 digits, arr=newtime org, n=1 or 2 replacements
 		arr[2] = 'E'
 	return arr
 
-def manualCorr(everyone): # makes edits to the most basic version of the DB
-	#these are all my manual corrections. 
+
+# makes edits to (=cleans) the most basic version of the DB
+# these are all my manual corrections, with brief explanations.
+# it is best to add data (manually) here to keep track of changes to
+# the database (whose dump file is not openly accessible as of 2017)
+# for future official versions of it.
+def manualCorr(everyone): 
 	print("Took in a list of %s individuals." % len(everyone))
 	del everyone['111596'] # removing empty entry, "TO BE DELETED"
 	del everyone['113084'] # removing empty entry
@@ -189,8 +198,6 @@ def manualCorr(everyone): # makes edits to the most basic version of the DB
 	everyone['161466'].gender = 'Eunuch' # Ioannes, eunuch and mystikos
 	everyone['x26847'].ethnic('Bulgarian') # Romanos the Bulgar
 
-
-
 	moreeunuchs = [ # list B of eunuchs
 	['x31996', 'Anonymus', 'l3001', 'Imperial eunuch killed by rebel', 'E XI', '4'],
 	['x31997', 'Anonymus', 'l3002', 'Imperial eunuch who tries to poison Basileios 2', 'E XI', '4'],
@@ -215,7 +222,8 @@ def manualCorr(everyone): # makes edits to the most basic version of the DB
 	
 	print("After deletions and additions, %s individuals remain." % len(everyone))
 
-# the overarching class of a Person. 
+
+# the overarching class of a Person. This is the basic data unit in these analyses.
 class Person():
 	def __init__(self, line):
 		self.id = line[0]
@@ -254,6 +262,7 @@ class Person():
 		if self.id == '108065': self.gender = 'Male'
 		if self.id == '107951': self.gender = 'Male' # Nikephoros 64 (Diogenes)
 
+	# clean and standardize the floruit for a person
 	def correctTime(self):
 		temp = self.floruit.replace(" ", "")
 		orgTime = ["a", "a", "a", "a"]
@@ -302,8 +311,9 @@ class Person():
 		self.floruit = orgTime
 		# currently (12.1.17) = 16 issues (all empty records)
 
-	def medi(self):
-		# determines the median date for an individual based on the factoids they are part of. 
+
+	# determines the median date for an individual based on the factoids they are part of. 
+	def medi(self):		
 		conn = pymysql.connect(host='localhost', port=3306, user='root', passwd='1234', db='pbw')
 		cur = conn.cursor()
 		cur.execute("SELECT nu.dates FROM factoidperson fp " + \
@@ -319,7 +329,8 @@ class Person():
 		if len(dates) > 0: self.mdate = statistics.median(dates)
 		#print(self.mdate, self.floruit)
 
-	def findRelatives(self): # takes quite a bit to run
+	# finds all the relatives of a person. takes quite a bit to run
+	def findRelatives(self): 
 		self.relatives = []
 		conn = pymysql.connect(host='localhost', port=3306, user='root', passwd='1234', db='pbw')
 		cur = conn.cursor()
@@ -342,10 +353,18 @@ class Person():
 		print('ID: %s, Name: %s, Description: %s, Floruit: %s, Gender: %s'
 			% (self.id, " ".join(self.name[0:2]), self.name[2], self.floruit, self.gender)) 
 
+	# adds a new ethnicity to a person
 	def ethnic(self, val):
 		if val not in self.ethnicity: self.ethnicity.append(val) 
 
-#Former attempts to draw the gender graph
+
+
+
+###########################################################
+####### relationship network part functions ###############
+###########################################################
+
+#Former attempts to draw the gender graph (obsolete)
 def genderGraph(every, cenpart, century, narrow): # narrow=0-2. obsolete 
 	toDraw = {}
 	graph = pydot.Dot(graph_type='graph') #can use 'digraph' for directed
@@ -388,8 +407,9 @@ def inTime(p, cenpart, century, narrow): # obsolete
 	return False
 
 
+# creates a graph of people (relatives) between both dates, marking gender visually.
 def genderGraph(every, begin, end, vague=False, pre=100, post=100, 
-	singles=False, documentary=False): # creates a graph of people between both dates
+	singles=False, documentary=False): 
 # pre/post is num years after which will continue to draw
 # vague=True includes people with only estimates (E/M XI) as peripheral nodes
 # if vague=True, pre and post are ignored.
@@ -398,15 +418,19 @@ def genderGraph(every, begin, end, vague=False, pre=100, post=100,
 	graph = pydot.Dot(graph_type='graph') #can use 'digraph' for directed
 
 	links = [] # to keep single links
+	# manually break up these (false) corrections
 	breakups = {('Konstantinos 8', 'Konstantinos 63'),	# prospective father in law
 				('Michael 61', 'Eudokia 1'),  # Psellos is not Eudokia's uncle
 				}
 	
+	# define blacklist
 	print("Blacklisting from graph: foreigners", end="")
 	if documentary == False: print(", documentary evidence", end="")
 	if vague == False: print(", vague-date individuals", end="")
 	print()
 	blacklist = getSet(every, foreigners=True, document=not documentary)
+	
+	# draw network graph
 	for i, val in every.items():
 		name = val.name[0] + " " + val.name[1]
 		if val.mdate >= begin and val.mdate <= end and name not in blacklist:
@@ -436,15 +460,13 @@ def genderGraph(every, begin, end, vague=False, pre=100, post=100,
 						else: attr_list = {'color': 'black'} 
 						edge = pydot.Edge(n, t, **attr_list)
 						graph.add_edge(edge)
-						links.append(nEdge)
-													
-
+						links.append(nEdge)									
 
 	print(graph) # just a reference to an object
 	graph.write_dot('rel_graph.dot')
 	
-
-def calcMedian(every): # takes about 30 seconds, finds ~6,400 medians, saves to file
+# saves the median dates for everyone in 'every' to a separate file
+def calcMedian(every): # takes about 30 seconds, finds ~6,400 medians
 	runtime = time.time()
 	f = open('medians.txt', 'w')
 	n = 0
@@ -458,7 +480,8 @@ def calcMedian(every): # takes about 30 seconds, finds ~6,400 medians, saves to 
 		+ " seconds.")
 	print("Calculated %s medians." % n)	
 
-def loadMedian(every): # loads the dates from aux. file (this is far quicker)
+# loads the dates from the auxiliary file (faster than using calcMedian every time)
+def loadMedian(every): 
 	inp = open('medians.txt', 'r')
 	n = 0
 	newline = inp.readline().strip().split('\t')
@@ -469,6 +492,11 @@ def loadMedian(every): # loads the dates from aux. file (this is far quicker)
 		
 	print("Loaded %s medians." % n)
 
+
+# this creates the relationships-gender graph. 
+# who = all individuals     start and end refer to cutoff dates
+# preint and postint refer to number of years before which and after which
+#	connections would still appear (meant to capture parents and children in the graph)
 def printGenGraph(who, start, end, minsize=5, preint=0, postint=20, \
 	vag=False, sing=False, doc=False):
 	# selecting vague=False or documentary=False removes many from list.
@@ -518,7 +546,7 @@ def printGenGraph(who, start, end, minsize=5, preint=0, postint=20, \
 	ans = j.split()
 	print("Overall %s men, %s women, and %s eunuchs" % (ans[0], ans[1], ans[2]))
 
-
+# used only in development.
 def testingGraphs(who, start, end, interval, minsize=5, preint=0, postint=20, \
 		vag=False, sing=False): # runs tests on the gender graphs to determine cutoff
 	for i in range(interval):
@@ -537,7 +565,7 @@ def testingGraphs(who, start, end, interval, minsize=5, preint=0, postint=20, \
 			dens = int(ans[1]) / (int(ans[0]) * int(ans[0]) - 1 / 2)
 			print("Density: %s." % dens)
 
-			
+# reads a period[E\M\L] and century converts date to four digit format (!!)
 def dateEqui(period, century):
 	temp = int(century)* 10
 	dating = ['E', 'M', 'L']
@@ -545,8 +573,8 @@ def dateEqui(period, century):
 	else: temp += dating.index(period) * 3 + 3
 	return temp
 
-def descGenderVague(who, st, cent1, en, cent2):
-	# returns number of people within vague limits
+# returns number and descriptive statistics of people within vague limits
+def descGenderVague(who, st, cent1, en, cent2):	
 	men = women = eunuchs = others = 0
 	earlylim = dateEqui(st, cent1)
 	latelim = dateEqui(en, cent2)
@@ -576,6 +604,7 @@ def descGenderVague(who, st, cent1, en, cent2):
 		% (wm, em, wem))
 	
 
+# descriptive statistics on gender
 def descGender(who, start, end): # returns number of each gender between inclusive years
 	# note that this still includes everyone (i.e. inc. crusaders and foreigners)
 	# covers only people with a concrete median date
@@ -595,21 +624,27 @@ def descGender(who, start, end): # returns number of each gender between inclusi
 	print(" W/N ratio: %.3f, Eu/N ratio: %.3f, W+E/N ratio: %.3f" 
 		% (wm, em, wem))
 
-def testingDescGender(who, start, end, minsize=5): # tests on gender to determine cutoff
+# tests on gender to determine cutoff points. Relevant only for development.
+def testingDescGender(who, start, end, minsize=5): 
 	for i in range(minsize):
 		for j in range(minsize):
 			descGender(who, start + i, end + j)
 
+# returns the ID of someone based on his name and IDB code
 def getPerID(everyone, name, code):
 	for i, val in everyone.items():
 		if val.name[0] == name and val.name[1] == code: return i
 	print("Couldn't find the person " + name + " " + code)
 
-def getRadolibos(everyone, filename): # this extracts a list of the people
+
+	# this extracts a list of the people
 	# in Radolibos (E12C): 350 people (1103) or 49 people (1100)
-	#from Radolibos. Returns a list of all their IDs. Requires original file. 
+	#from Radolibos. Returns a list of all their IDs. Requires original file.
+
+# returns all individuals from Radolibos. 
+# I created the file by copy-pasting the text from the two PBW entries	
+def getRadolibos(everyone, filename):  
 	runtime = time.time()
-	# I created the file by copy-pasting the text from PBW entry
 	f = open(filename, 'r') 
 	num_lines = sum(1 for line in open(filename))
 	n = 0
@@ -648,9 +683,12 @@ def getRadolibos(everyone, filename): # this extracts a list of the people
 	#print(paroikoi)
 	return paroikoi
 
+# this returns a subset of 'every' based on three criteria, meant to be used
+# for blacklisting certain groups of individuals
 def getSet(every, foreigners=True, vagueDate=True, document=True):
 	# true values mean these categories would be returned in the set 'blacklist'
 
+	# these use sets for faster performance
 	docu = {'Basileios 142', 'Anna 107', 'Barbara 102', 'Blasios 105', 'Ioannikios 104', 
 		'Demetrios 119', 'Basileios 143', 'Maria 114', 'Petros 117', 'Ioannes 192', 
 		'Anastasia 103', 'Gnebotos 101', 'Maure 101', 'Stephanos 118', 'Ioannes 194', 
@@ -798,6 +836,7 @@ def getSet(every, foreigners=True, vagueDate=True, document=True):
 
 	vagueDate = set()
 
+	# unions all sets based on the function's parameters
 	blacklist = set()
 	if foreigners == True: blacklist = blacklist.union(foreig)
 	if document == True: blacklist = blacklist.union(docu)
@@ -813,6 +852,7 @@ def getSet(every, foreigners=True, vagueDate=True, document=True):
 
 	return blacklist
 
+# removes all individuals in the blacklist from 'every'
 def removeBList(every, blist):
 	newDict = {}
 	for i, val in every.items():
@@ -846,10 +886,19 @@ def genderTests(every, rel):
 
 
 
-#draws the selected eunuch graph; only one of the parameters can be true. 
+
+
+###########################################################
+############### eunuch part functions #####################
+###########################################################
+
+#draws the selected eunuch graph; only one of the parameters can be true.
+# offices=True - keeps emperor nodes of same size, weights eunuchs based on their offices
+# emperorweight=True - keeps eunuch nodes of same size, weights emperors based on the 
+#				number of eunuchs who first appeared divided by the length of their reign
 def eunuchGraph(offices=False, emperorweight=False):
 	graph = pydot.Dot(graph_type='graph')
-	# emperor = name: start year, end year, eunuchs that first appear/regnal years
+	# emperor = name: [start year, end year, eunuchs that first appear divided by regnal years]
 	emperors = {'Basileios 2': [976, 1025, 0.18], 'Konstantinos 8': [1025, 1028, 2.33], 
 		'Romanos 3': [1028, 1034, 0.16], 'Michael 4': [1034, 1041, 1], 
 		'Michael 5': [1041, 1042, 2], 'Zoe 1': [1042, 1042, 0], 
@@ -915,6 +964,8 @@ def eunuchGraph(offices=False, emperorweight=False):
 
 		else: print("No dates listed for %s (prob. in eunuch list B)" % i)
 
+	# output everything to graphs, based on user choice. 
+	# I did not use the PDFs, and continued working on the dot files in Gephi.
 	print(graph)
 	if offices == True:
 		graph.write_dot('eunuch_office_weighted.dot')
@@ -946,6 +997,7 @@ def importEunuchOffices(eunuchlist, filename, cursor): # takes a
 	for i in eunuchlist:
 		n += 1
 		if i[1][0] == 'l' or i[1][0] == 'x': continue # new DB entries not in PBW
+		# 'x' refers to the PmbW database; 'l' refers to individuals I've found & added
 		# note that the df.stdName here isn't 100% identical in form to the online version
 		cursor.execute("""SELECT p.personKey, p.name, p.mdbCode, df.stdName FROM person p 
 					INNER JOIN factoidperson fp ON fp.personKey = p.personKey 
@@ -966,8 +1018,8 @@ def importEunuchOffices(eunuchlist, filename, cursor): # takes a
 def addEunuchDates(filename): # returns a list of eunuch offices+dates
 # loads the eunuchs' dates, based on my research
 # these dates are IMPRECISE and meant to anchor the eunuchs in imperial
-# reigns. The format for dates is [start, end, 0/1 if vague]. Eunuchs are
-# listed in the order they appear in the Google Docs
+# reigns. The format for dates is [start, end, 0 if clear/1 if vague]. Eunuchs are
+# listed in the order they appear in my Google Docs list
 	eun = {'Anonymus x27488C': [972, 975, 1], 'Petros x26496': [975,977,0],
 		'Basileios x20925': [950, 985, 0], 'Anthes x20452': [975, 977, 0],
 		'Leon x24532': [975, 980, 0], 'Symeon x27488': [975, 1000, 0],
@@ -1059,7 +1111,8 @@ def addEunuchDates(filename): # returns a list of eunuch offices+dates
 
 	return result
 
-def officeRank(offic): # takes an office and returns its importance (4=high, 1=low)
+# takes an office and returns its importance (4=high, 1=low)
+def officeRank(offic): 
 	# ranks are organized: church \ army \ palace \ ranks
 	off = offic.split()[0]
 	off = off.lower()
@@ -1100,7 +1153,10 @@ def officeRank(offic): # takes an office and returns its importance (4=high, 1=l
 
 
 
-######## foreigner part ######### - currently not planned for development
+###########################################################
+############### foreigner part functions ##################
+########## currently not planned for development###########
+###########################################################
 
 #this function takes a dictionary and returns a set of all foreigners listed as such. TESTED.
 def getForeigners(every):
@@ -1186,7 +1242,9 @@ def importForeignerOffices(fSet, filename, cursor):
 
 
 
-######## factoid-connection part ######### 
+###########################################################
+######## factoid-based network part functions #############
+###########################################################
 
 # returns all the NarrativeUnitIDs for a given year. Works.
 def getAnnualFactoids(cursor, year):
@@ -1222,7 +1280,7 @@ def getFactoidConnections(cursor, nuid):
 	return edgelist
 
 # takes dates and returns all connections in them.
-# instant for at least 20 years
+# instant runtime for at least 20 year intervals
 def allConnections(start, end, cursor):
 	conn = []
 	sumL = 0
@@ -1246,7 +1304,7 @@ def allConnections(start, end, cursor):
 		(str(sumL), str(len(edges))))
 	return edges
 
-# returns a file with all the unique edges for a time interval
+# returns an EDGES file with all the unique edges for a time interval
 # when importing to cytoscape: there are no headers; use TAB and space to limit
 # otherwise it will mess up the spaces
 def massiveGraph(start, end, cursor):
@@ -1304,13 +1362,18 @@ def factoidStats(start, end, cursor):
 
 
 
-######### main part of program #########
+#####################################################################
+#####################################################################
+##################### main part of program ##########################
+#####################################################################
+#####################################################################
+
 
 conn = pymysql.connect(host='localhost', port=3306, user='root', passwd='1234', db='pbw')
 cur = conn.cursor()
 #settingup('basiclist.txt', cur)
 
-#Basic stuff:
+#Basic stuff required for all subsequent analyses:
 everyone = memoryload('basiclist.txt')
 ethnicities(everyone)	# loads all entries with their ethnicities
 loadMedian(everyone)
@@ -1318,34 +1381,66 @@ relev = relevantPeople(everyone) # removes people not in L10-E12C
 
 #####################################################################
 ########un-comment the subsection you want to run ###################
+########### (remove all '###' from that section) ####################
+#####################################################################
+# all the written analysis is in my (Lee Mordechai's) dissertation,##
+#Costly Diversity: Transformations, Networks and Minorities, 976-1118
 #####################################################################
 
-######################  Chapter subsection 1: Large-scale visualization
+
+######################  Chapter 3 subsection 1: Elite Families
+#####################################################################
+# data taken from Kazhdan and Ronchey's L'aristocrazia byzantina
+# analysis was done in Excel 
+# visualization was done in Tableau
+
+# empty since nothing was done in Python
+
+
+######################  Chapter 3 subsection 2: Eunuchs & administrations
+#####################################################################
+# data from Prosopography of Byzantine World database and personal research
+# analysis & cleaning here (Python)
+# visualization through Gephi
+
+###importEunuchOffices(getEunuchs(everyone), 'eunuchoff.txt', cur)
+###addEunuchDates('eunuchoff.txt')
+
+# running this three times for all three graphs. 
+# only one parameter can be True at a time
+###eunuchGraph(offices=True, emperorweight=False)
+###eunuchGraph(offices=False, emperorweight=True)
+###eunuchGraph(offices=False, emperorweight=False)
+
+
+######################  Chapter 3 subsection 3: Large-scale visualization
+#####################################################################
+# data from Prosopography of Byzantine World database and personal research
+# cleaning & analysis here (Python)
+# analysis & visualization through Cytoscape
+
+# tests:
 #getAnnualFactoids(cur, 1051)
 #getFactoidConnections(cur, '25415')
 #allConnections(1051, 1071, cur)
 
-#massiveGraph(1025, 1057, cur)
-#massiveGraph(1058, 1080, cur)
-#massiveGraph(1081, 1118, cur)
+# create the large network graphs
+###massiveGraph(1025, 1057, cur)
+###massiveGraph(1058, 1080, cur)
+###massiveGraph(1081, 1118, cur)
+
+# an extra test
 #factoidStats(1098,1098, cur)
 
 
 
-######################  Chapter subsection 3: Kin Networks (gender-marked)
-#genderTests(everyone, relev) 
+######################  Chapter 3 subsection 4: Kin Networks (gender-marked)
+#####################################################################
+# data from Prosopography of Byzantine World database and personal research
+# cleaning & analysis here (Python)
+# visualization through command prompt (graphviz)
 
-
-
-######################  Chapter subsections 4: Eunuchs & administrations
-importEunuchOffices(getEunuchs(everyone), 'eunuchoff.txt', cur)
-addEunuchDates('eunuchoff.txt')
-
-# running this three times for all three graphs. 
-# only one parameter can be True at a time
-eunuchGraph(offices=True, emperorweight=False)
-eunuchGraph(offices=False, emperorweight=True)
-eunuchGraph(offices=False, emperorweight=False)
+genderTests(everyone, relev) 
 
 
 # clean up
@@ -1357,6 +1452,15 @@ conn.close()
 
 
 
+
+#####################################################################
+########################## end of file ##############################
+#####################################################################
+
+
+#####################################################################
+#################### former scraps and comments #####################
+#####################################################################
 
 #for i, val in everyone.items():
 #	if val.gender == 'Eunuch' and val.mdate > 1: 
@@ -1377,10 +1481,6 @@ conn.close()
 
 ########### Foreigner part, currently not planned for development
 #importForeignerOffices(getForeigners(everyone), 'foreignoff.txt', cur)
-
-
-
-
 
 # to do:
 # - make relations keep its records in a separate file and use 
