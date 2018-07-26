@@ -5,8 +5,9 @@
 The files here include high-resolution versions of the graphs in my dissertation, and the code I used to create them. For more details, please contact me. 
 
 <h4>File details:</h4>  
+
 **basics.py** - for all the code used to run the analyses; the code is commented and more detailed instructions are at its bottom  
-**Dissertation** - Visuals for Ch. 3.pdf - all the visuals for the chapter in one PDF file
+**Dissertation - Visuals for Ch. 3.pdf** - all the visuals for the chapter in one PDF file  
 
 This file contains the dataset from Kazhdan's book l'aristocrazia bizantina, together with EDA (exploratory data analysis). This dataset was used in section 3 of Ch. 3.  
 **Kazhdan's data - raw.xlsx**
@@ -29,5 +30,6 @@ The following are network analyses of kin groups (Ch. 3 section 4):
 **1081-1118_5plus.png**  
 
 <h4>Later additions:</h4>  
+
 **Kazhdan's data - Feb. 2018.xlsx** - a revised version of 'Kazhdan's data - raw.xlsx'  
 **eunuchsarticle.py** - more analyses that are not included in the dissertation  
