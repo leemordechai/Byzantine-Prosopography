@@ -17,11 +17,9 @@ The following are network analyses of eunuchs, as used in Ch. 3 section 2:
 **Eunuch admins emperors weighted (graph 2).pdf**  
 **Eunuch admins eunuchs weighted (graph 3).pdf**  
 
-The following are network analyses of connections over time in eleventh century Byzantine society used in Ch. 3 section 3. Each has a PDF and a png version:  
-**massive1025-1057.pdf**  
-**massive1025-1057.png**  
+The following are network analyses of connections over time in eleventh century Byzantine society used in Ch. 3 section 3:  
+**massive1025-1057.pdf**   
 **massive1058-1080.pdf**  
-**massive1058-1080.png**  
 **massive1081-1118.pdf**  
 
 The following are network analyses of kin groups (Ch. 3 section 4):  
