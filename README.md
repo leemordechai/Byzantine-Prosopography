@@ -31,5 +31,7 @@ The following are network analyses of kin groups (Ch. 3 section 4):
 
 <h4>Later additions:</h4>  
 
+**Eunuch database.pdf** - most recent version of eunuch database (continuously updated)  
 **Kazhdan's data - Feb. 2018.xlsx** - a revised version of 'Kazhdan's data - raw.xlsx'  
 **eunuchsarticle.py** - more analyses that are not included in the dissertation  
+
